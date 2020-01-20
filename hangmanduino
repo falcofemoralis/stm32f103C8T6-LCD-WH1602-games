@@ -1,0 +1,446 @@
+#include "stm32F10x.h"
+#include "hd44780_driver\hd44780_driver.h"
+#include "stm32f10x_rcc.h"
+#include "stm32f10x_rtc.h"
+#include "stm32f10x_tim.h"
+#include "stm32f10x_pwr.h"
+#include "stm32f10x_gpio.h"
+#include <string.h>
+#include <stdlib.h>
+
+#define useLED 1
+
+int vocabulary = 12;
+char AnswerWord[10];
+char RightWord[10];
+char words[][10]={"screen","gate","card","chicken","world","video","computer","processor","monitor","hello","master","keyboard"};
+char symbols[26]={"abcdefghijklmnopqrstuvwxyz"};
+char symbolsSep[][10]={"|","|","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","|","|"};
+int score = 7,amount=0;
+char user_char[8];
+int RTC_Counter = 0;
+
+void updateScreen(int chooseChar){
+	lcd_clear();
+	int x=5,k=0;
+	lcd_set_xy(x,0);
+
+	for(int i=x;i<7+x;i++){
+		lcd_set_xy(i,0);
+		if(i==7){
+			lcd_out(">");
+			k++;
+		}else if(i==9){
+			lcd_out("<");
+			k++;
+		}else{
+			lcd_out(symbolsSep[i-x+chooseChar-k]);
+		}
+	}
+	lcd_set_xy(x,1);
+	lcd_out(AnswerWord);
+
+	//0 symbol
+	lcd_set_xy(2,0);
+	lcd_send(0, DATA);
+	//1 symbol
+	lcd_set_xy(2,1);
+	lcd_send(1, DATA);
+
+	if(score==7){
+		//2 symbol
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+	}else if(score==6){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b00000;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+	}else if(score==5){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b00100;
+		user_char[6]=0b00100;
+		user_char[7]=0b00100;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+
+		user_char[0]=0b00100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b00000;
+		user_char[4]=0b00000;
+		user_char[5]=0b00000;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(3, user_char);
+		lcd_set_xy(3,1);
+		lcd_send(3, DATA);
+	}else if(score==4){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b00101;
+		user_char[6]=0b00110;
+		user_char[7]=0b00100;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+
+		user_char[0]=0b00100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b00000;
+		user_char[4]=0b00000;
+		user_char[5]=0b00000;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(3, user_char);
+		lcd_set_xy(3,1);
+		lcd_send(3, DATA);
+	}else if(score==3){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b10101;
+		user_char[6]=0b01110;
+		user_char[7]=0b00100;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+
+		user_char[0]=0b00100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b00000;
+		user_char[4]=0b00000;
+		user_char[5]=0b00000;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(3, user_char);
+		lcd_set_xy(3,1);
+		lcd_send(3, DATA);
+	}else if(score==2){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b10101;
+		user_char[6]=0b01110;
+		user_char[7]=0b00100;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+
+		user_char[0]=0b00100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b00010;
+		user_char[4]=0b00010;
+		user_char[5]=0b00001;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(3, user_char);
+		lcd_set_xy(3,1);
+		lcd_send(3, DATA);
+	}else if(score==1){
+		user_char[0]=0b11100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01110;
+		user_char[4]=0b01110;
+		user_char[5]=0b10101;
+		user_char[6]=0b01110;
+		user_char[7]=0b00100;
+		lcd_set_user_char(2, user_char);
+		lcd_set_xy(3,0);
+		lcd_send(2, DATA);
+
+		user_char[0]=0b00100;
+		user_char[1]=0b00100;
+		user_char[2]=0b00100;
+		user_char[3]=0b01010;
+		user_char[4]=0b01010;
+		user_char[5]=0b10001;
+		user_char[6]=0b00000;
+		user_char[7]=0b00000;
+		lcd_set_user_char(3, user_char);
+		lcd_set_xy(3,1);
+		lcd_send(3, DATA);
+	}else if(score==0){
+		lcd_set_xy(3,0);
+		lcd_out("0");
+	}
+}
+
+void win(){
+	lcd_clear();
+	lcd_set_xy(5,0);
+	lcd_out("win");
+	lcd_set_xy(5,1);
+	lcd_out(RightWord);
+
+	if(useLED){
+		int i;
+		for(int k=0;k<10;k++){
+			  //yellow
+			  GPIOB->ODR = GPIO_Pin_0;
+			  for(i=0;i<0x25000;i++);
+
+			  GPIOB->ODR ^= GPIO_Pin_0; // Invert B0
+			  for(i=0;i<0x25000;i++);
+
+			  //green
+			  GPIOB->ODR = GPIO_Pin_1;
+			  for(i=0;i<0x25000;i++);
+
+			  GPIOB->ODR ^= GPIO_Pin_1; // Invert B1
+			  for(i=0;i<0x25000;i++);
+
+			  //red
+			  GPIOB->ODR = GPIO_Pin_5;
+			  for(i=0;i<0x25000;i++);
+
+			  GPIOB->ODR ^= GPIO_Pin_5; // Invert B5
+			  for(i=0;i<0x25000;i++);
+
+			  //blue
+			  GPIOB->ODR = GPIO_Pin_6;
+			  for(i=0;i<0x25000;i++);
+
+			  GPIOB->ODR ^= GPIO_Pin_6; // Invert B6
+			  for(i=0;i<0x25000;i++);
+				}
+		  lcd_clear();
+		  lcd_set_xy(5,0);
+		  lcd_out("reset in");
+		  lcd_set_xy(5,1);
+		  lcd_out("progress...");
+		  lcd_clear();
+		  NVIC_SystemReset();
+	}else{
+		while(1){
+		      if(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==0 || GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)==0){
+		    	  for(int k=0;k<300000;k++);
+		    	  lcd_clear();
+		    	  lcd_set_xy(5,0);
+		    	  lcd_out("reset in");
+		    	  lcd_set_xy(5,1);
+		    	  lcd_out("progress...");
+		    	  lcd_clear();
+		    	  NVIC_SystemReset();
+		      }
+		}
+	}
+}
+
+void gameOver(){
+	lcd_clear();
+	lcd_set_xy(3,0);
+	lcd_out("game over");
+	lcd_set_xy(3,1);
+	lcd_out(RightWord);
+	while(1){
+	      if(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==0 || GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)==0){
+	    	  for(int k=0;k<300000;k++);
+	    	  lcd_clear();
+	    	  lcd_set_xy(5,0);
+	    	  lcd_out("reset in");
+	    	  lcd_set_xy(5,1);
+	    	  lcd_out("progress...");
+	    	  lcd_clear();
+	    	  NVIC_SystemReset();
+	      }
+	}
+}
+
+void word(int chooseChar){
+	char WrongCharacter = 1;
+	for(int i=0;i<amount;i++){
+		if(symbols[chooseChar] == RightWord[i]){
+			AnswerWord[i]= symbols[chooseChar];
+			updateScreen(chooseChar);
+			WrongCharacter=0;
+		}
+	}
+
+	if(symbolsSep[chooseChar+2][0]!='*'){
+		if(WrongCharacter==1){
+			symbolsSep[chooseChar+2][0]='*';
+			if(score==1){
+				gameOver();
+			}else {
+				score--;
+				updateScreen(chooseChar);
+
+			}
+		}
+	}
+
+	if(strcmp(AnswerWord,RightWord)==0)
+		win();
+}
+
+unsigned char RTC_Init(void)
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
+	PWR_BackupAccessCmd(ENABLE);
+	if ((RCC->BDCR & RCC_BDCR_RTCEN) != RCC_BDCR_RTCEN)
+	{
+		RCC_BackupResetCmd(ENABLE);
+		RCC_BackupResetCmd(DISABLE);
+
+		RCC_LSEConfig(RCC_LSE_ON);
+		while ((RCC->BDCR & RCC_BDCR_LSERDY) != RCC_BDCR_LSERDY) {}
+		RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);
+
+		RTC_SetPrescaler(0x7FFF);
+
+		RCC_RTCCLKCmd(ENABLE);
+
+		RTC_WaitForSynchro();
+
+		return 1;
+	}
+	return 0;
+}
+
+int main(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+
+	GPIO_InitTypeDef GPIO_Initstruct;
+	GPIO_Initstruct.GPIO_Pin =GPIO_Pin_6|GPIO_Pin_5|GPIO_Pin_0|GPIO_Pin_1;
+	GPIO_Initstruct.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Initstruct.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOB, &GPIO_Initstruct);
+
+	GPIO_ResetBits(GPIOB, GPIO_Pin_6);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_5);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_1);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+	
+	GPIO_InitTypeDef  GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7|GPIO_Pin_8;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIOB->ODR = GPIO_Pin_7|GPIO_Pin_8;
+	lcd_init();
+	lcd_clear();
+	lcd_set_4bit_mode();
+	lcd_set_state(LCD_ENABLE , CURSOR_DISABLE, NO_BLINK);
+
+	//0 symbol
+	user_char[0]=0b11111;
+	user_char[1]=0b10000;
+	user_char[2]=0b10000;
+	user_char[3]=0b10000;
+	user_char[4]=0b10000;
+	user_char[5]=0b10000;
+	user_char[6]=0b10000;
+	user_char[7]=0b10000;
+	//loading 0 symbol
+	lcd_set_user_char(0, user_char);
+
+	//1 symbol
+	user_char[0]=0b10000;
+	user_char[1]=0b10000;
+	user_char[2]=0b10000;
+	user_char[3]=0b10000;
+	user_char[4]=0b10000;
+	user_char[5]=0b11111;
+	user_char[6]=0b11111;
+	user_char[7]=0b11111;
+	//loading 0 symbol
+	lcd_set_user_char(1, user_char);
+
+	//2 symbol
+	user_char[0]=0b11100;
+	user_char[1]=0b00100;
+	user_char[2]=0b00100;
+	user_char[3]=0b00000;
+	user_char[4]=0b00000;
+	user_char[5]=0b00000;
+	user_char[6]=0b00000;
+	user_char[7]=0b00000;
+	//loading 2 symbol
+	lcd_set_user_char(2, user_char);
+
+	int exit = 0;
+	lcd_set_xy(3,0);
+	lcd_out("press");
+	lcd_set_xy(3,1);
+	lcd_out("to start");
+	while(exit == 0){
+		if (RTC_Init() == 1) {
+			for(int k=0;k<200000;k++);
+			RTC_SetCounter(200);
+		}
+		if(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==0 || GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8)==0){
+			for(int k=0;k<400000;k++);
+			srand(RTC_GetCounter());
+			strcpy(RightWord,words[rand()%(vocabulary-1)]);
+			lcd_clear();
+			exit = 1;
+
+		}
+
+	}
+
+	amount = strlen(RightWord);
+
+	for(int i=0;i<amount;i++)
+		AnswerWord[i]='_';
+
+
+	int chooseChar=0,duration = 0;
+	updateScreen(chooseChar);
+
+	while(1)
+    {
+		char button2 = GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8);
+
+		while(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7)==0){
+			for(int k=0;k<100000;k++);
+			duration++;
+		}
+
+		if (duration>0 && duration <10) {
+			for(int k=0;k<200000;k++);
+			if(chooseChar!=25)
+				chooseChar++;
+			updateScreen(chooseChar);
+			duration=0;
+		}else if (duration>10) {
+			word(chooseChar);
+			for(int k=0;k<100000;k++);
+			duration=0;
+		}
+
+		if(button2 == 0){
+				for(int k=0;k<400000;k++); //10000
+				if(chooseChar!=0)
+					chooseChar--;
+				updateScreen(chooseChar);
+				for(int k=0;k<10000;k++);
+				}
+		}
+ }
